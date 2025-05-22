@@ -1,0 +1,230 @@
+DROP TABLE IF EXISTS school;
+DROP TABLE IF EXISTS school2;
+DROP TABlE IF EXISTS pupils;
+DROP TABlE IF EXISTS parents;
+
+---Создаём таблицу «Школы»
+CREATE TABLE school ( 
+schoolno NUMERIC(3) PRIMARY KEY, 
+name VARCHAR(80) NOT NULL);
+
+---Заполняем данными таблицу «Школы»
+INSERT INTO school  VALUES 
+(1, 'Школа № 763' ),
+(2, 'Школа № 123' ),
+(3, 'Школа № 245' ),
+(4, 'Школа № 145' ),
+(5, 'Школа № 255' );
+---Создаём таблицу «Школы2»
+CREATE TABLE school2 ( 
+schoolno NUMERIC(3), 
+name VARCHAR(80) NOT NULL);
+
+---Заполняем данными таблицу «Школы2»
+INSERT INTO school2  VALUES
+(1, 'Школа № 763' ),
+(2, 'Школа № 123' ),
+(333, 'Школа № 845' ),
+(444, 'Школа № 275' ),
+(555, 'Школа № 655' );
+
+---Создаём таблицу «Ученики»
+CREATE TABLE pupils(  
+  pupnum    number(3,0) PRIMARY KEY,
+  schoolno    number(3,0),  	
+  pupname     varchar2(50) NOT NULL,  
+  born     date,  
+  grade   number(10,1)
+);
+
+---Заполняем данными таблицу «Ученики» 
+INSERT INTO pupils  VALUES
+(1, 1, 'Петров Юрий Борисович', '01-FEB-2011', 99),
+(2, 1, 'Козлов Иван Петрович', '12-MAR-2010', 85),
+(3, 2, 'Иванова Анна Сергеевна', '23-APR-2010', 83),
+(4, 3, 'Селиванова Ольга Петровна', '12-MAY-2011', 100),
+(5, 3, 'Барсуков Илья Борисович', '13-JUL-2011', 34),
+(6, 3, 'Сидорова Мария Викторовна', '02-JUN-2012', 56),
+(7, 12, 'Спиридов Василий Иванович', '01-JUL-2013', 96),
+(777, 13, 'Васильев Иван Петрович', '02-AUG-2141', 86);
+
+---Создаём таблицу «Родители»
+CREATE TABLE parents(
+  pupnum INT REFERENCES pupils,
+  parent_name VARCHAR(50),
+  parent_gender VARCHAR(10) CHECK (parent_gender in ('м', 'ж')),
+  PRIMARY KEY (pupnum, parent_name));
+
+---Заполняем данными таблицу «Родители» 
+INSERT INTO parents VALUES
+(1,'Петров Борис', 'м'),
+(1, 'Петрова Ольга', 'ж'),
+(2, 'Козлов Пётр', 'м'),
+(2, 'Козлова Инна', 'ж'),
+(3, 'Иванов Сергей', 'м'),
+(3, 'Иванова Алла', 'ж'),
+(4, 'Селиванова Инна', 'ж'),
+(5, 'Барсуков Борис', 'м'),
+(5, 'Кузнецова Ольга', 'ж'),
+(6, 'Сидорова Анна', 'ж');
+
+
+
+
+
+
+
+
+
+/1. Выведите число учеников в базе данных.
+SELECT COUNT(*) количество_учеников FROM pupils;
+
+/2. Выведите в одной таблице минимальный и максимальный баллы по всем ученикам.
+SELECT MIN(grade) минимальный, MAX(grade) максимальный from pupils;
+
+/3. Выведите средний балл учеников Школы № 123.
+SELECT AVG(grade) FROM pupils WHERE schoolno=
+(SELECT schoolno FROM school WHERE name LIKE '%123%');
+
+/4. Выведите названия школ и средний балл учеников по каждой школе 
+(округлите значение среднего балла до двух знаков после десятичного разделителя).
+SELECT d.name, ROUND(AVG(grade), 2)
+FROM pupils e INNER JOIN school d
+ON e.schoolno = d.schoolno
+GROUP BY d.name;
+
+/5. Выведите названия школ и число учеников в каждой школе.
+
+SELECT name, COUNT(*) AS number
+from school, pupils
+WHERE school.schoolno = pupils.schoolno
+GROUP BY school.schoolno;
+
+/6. Выведите названия школ, в которых учатся больше 2-х учеников.
+SELECT s.name
+FROM pupils p NATURAL JOIN school s
+GROUP BY s.name
+HAVING COUNT(*)>2;
+
+/7. Выведите таблицу с двумя колонками. В первой колонке ФИО ученика, а во второй его родителя.
+SELECT e.pupname, c.parent_name FROM pupils e JOIN parents c ON e.pupnum = c.pupnum;
+
+/8. Выведите таблицу с двумя колонками. В первой колонке ФИО ученика, 
+а во второй – количество родителей, по которым есть информация в базе данных.
+
+SELECT pupname, COUNT(*) AS number
+from pupils, parents
+WHERE parents.pupnum = pupils.pupnum
+GROUP BY pupils.pupname;
+
+/9. Выведите ФИО учеников, у которых есть родитель мужского пола в базе данных.
+SELECT DISTINCT p.pupname
+FROM pupils p JOIN parents pr ON p.pupnum = pr.pupnum
+WHERE pr.parent_gender='м';
+
+/10. Выведите ФИО родителей учеников, которые учатся в Школе №123.
+SELECT DISTINCT pr.parent_name
+FROM pupils p JOIN parents pr ON p.pupnum = pr.pupnum
+WHERE p.schoolno = (SELECT schoolno FROM school WHERE name LIKE '%123%');
+
+/11. Выведите названия школ, в которых у всех учеников суммарно есть хотя бы трое родителей, 
+внесенных в базу данных.
+SELECT s.name
+FROM school s JOIN pupils p ON p.schoolno=s.schoolno JOIN parents pr ON pr.pupnum = p.pupnum
+GROUP BY s.name
+HAVING COUNT (*)>=3;
+
+/12. Выведите ФИО учеников с отчеством Петровна или Петрович и названиями школ, 
+в которых они учатся.
+
+SELECT pupname, name
+FROM pupils, school
+WHERE(pupils.pupname LIKE '%Петровна' OR pupils.pupname LIKE '%Петрович') AND school.schoolno = pupils.schoolno ;
+
+/13. Выведите по каждому ученику таблицу с родителями в следующем формате:
+Выведите информацию только по тем ученикам, по которым данные об обоих родителях 
+присутствуют в базе данных.
+
+SELECT 'Отец: ' ||  f.parent_name || ' / Мать: '||   m.parent_name AS information
+FROM parents f INNER JOIN parents m 
+ON f.pupnum = m.pupnum and f.parent_gender = 'м' and m.parent_gender = 'ж';
+
+
+/14. Соедините таблицы «Школы» и «Ученики» на основе декартова произведения таблиц 
+и выведите все содержимое новой таблицы.
+SELECT * FROM school CROSS JOIN pupils;
+
+/15. Соедините таблицы «Школы» и «Ученики» по ключу “schoolno” и выведите все 
+содержимое новой таблицы.
+SELECT * FROM school s JOIN pupils p ON s.schoolno = p.schoolno;
+
+/16. Объедините в одну таблицу данные из таблиц «Школы» и «Школы2»
+без дублирования одинаковых записей.
+SELECT * FROM school
+UNION
+SELECT * FROM school2;
+
+/17. Отобразите названия школ, которые есть в таблице «Школы», но отсутствуют в таблице «Школы2».
+SELECT * FROM school
+EXCEPT
+SELECT * FROM school2;
+
+/18. Отобразите названия школ, которые есть и в таблице «Школы», и в таблице «Школы2».
+SELECT * FROM school
+INTERSECT
+SELECT * FROM school2;
+
+/19. Отобразите в одной таблице информацию из таблиц «Школы» и «Ученики». 
+Если в школе нет учеников, то информация о ней отображается в таблице, 
+а в столбцах с информацией про учеников написан текст «Отсутствует информация». 
+Если у ученика отсутствует информация по его школе, то он не отображается в таблице.
+
+select school.*,
+    CASE 
+        WHEN pupnum IS NULL THEN ' Отсутствует информация '
+        ELSE pupnum
+        END AS pupnum,
+    CASE 
+        WHEN pupils.schoolno IS NULL THEN ' Отсутствует информация '
+        ELSE pupils.schoolno
+        END AS schoolno,
+    CASE
+        WHEN pupname IS NULL THEN ' Отсутствует информация '
+        ELSE pupname
+        END AS pupname,
+    CASE
+        WHEN born IS NULL THEN ' Отсутствует информация '
+        ELSE born
+        END AS born,
+    cASE
+        WHEN grade IS NULL THEN ' Отсутствует информация '
+        ELSE grade
+        END AS grade
+from school LEFT join pupils
+on school.schoolno=pupils.schoolno;
+
+/20. Отобразите в одной таблице информацию из таблиц «Школы» и «Ученики». 
+Если у ученика отсутствует информация по его школе, то информация об ученике 
+отображается в таблице, а в столбцах с информацией про школы стоят пропуски (NULL). 
+Если у школы отсутствуют ученики, то информация о ней не отображается в таблице.
+
+select *
+from school RIGHT join pupils
+on school.schoolno=pupils.schoolno;
+
+/21. Отобразите в одной таблице информацию о школах и учениках. 
+В таблице должны присутствовать и школы, в которых нет учеников, 
+и ученики, для которых информация об их школах отсутствует в базе данных. 
+Пропущенные ячейки будут помечены как NULL.
+
+select *
+from school FULL join pupils
+on school.schoolno=pupils.schoolno;
+
+/22. Отобразите названия только тех школ из таблицы «Школы», в которых есть ученики.
+SELECT DISTINCT name FROM pupils NATURAL JOIN school;
+
+/23. Выведите названия школ с наивысшей оценкой, полученной их учениками, если учеников 
+в школе нет, то все равно выводится название школы.
+SELECT s.name, max(grade) FROM school s LEFT JOIN pupils p ON s.schoolno = p.schoolno
+GROUP BY s.name;
